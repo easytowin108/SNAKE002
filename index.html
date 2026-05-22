@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>EASY to WIN</title>
+    <style>
+        /* Full Screen Reset - Screen ko starting me clean aur blank rakhne ke liye */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden; /* App look dene ke liye scroll disabled */
+            background: #020617; /* Dark smooth background jab tak content fetch ho */
+        }
+
+        /* Immersive App Sandbox Iframe View Container */
+        #htmlContainerView {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #020617;
+            z-index: 99999;
+        }
+
+        .html-frame {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: #020617;
+        }
+    </style>
+</head>
+<body>
+
+<!-- HTML Code Engine Output Canvas Frame -->
+<div id="htmlContainerView">
+    <iframe id="appSandboxEngine" class="html-frame"></iframe>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+    // Firebase Configuration
+    const firebaseConfig = {
+        apiKey: "AIzaSyDntfLGyllAZ7Qzymc56E8mSWkyFzbTkYo",
+        databaseURL: "https://runnerscore-ffbbb-default-rtdb.asia-southeast1.firebasedatabase.app",
+    };
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    const containerView = document.getElementById('htmlContainerView');
+    const sandboxEngine = document.getElementById('appSandboxEngine');
+
+    // Device Identification Setup
+    const DEVICE_ID = localStorage.getItem("device_uid") || "DEV-" + Math.random().toString(36).slice(2, 12);
+    localStorage.setItem("device_uid", DEVICE_ID);
+
+    let cachedSettings = null;
+    let redirectTriggered = false;
+    let lastRenderedPayload = ""; 
+
+    // --- Core Instant Auto Unlock & HTML Execution Engine (No Delay) ---
+    function triggerSecureRedirection() {
+        if (!cachedSettings || redirectTriggered) return;
+        redirectTriggered = true; // Overlapping loops ko block karne ke liye
+
+        // 1. Background me instant Device Auto-Unlock synchronize karein
+        set(ref(db, 'unlockedDevices/' + DEVICE_ID), true).then(() => {
+            console.log("Device auto-unlocked successfully.");
+            
+            // 2. Bina kisi setTimeout delay ke turant HTML payload load karein
+            let targetHtmlCode = cachedSettings.htmlCodeBtn2 || cachedSettings.htmlCodeBtn4;
+            
+            if (!targetHtmlCode) {
+                targetHtmlCode = "<h1 style='color:white;text-align:center;padding-top:50px;font-family:sans-serif;'>No Active HTML Code Uploaded from Admin Panel</h1>";
+            }
+            
+            // Flicker Protection: Sirf tabhi write karein jab payload sach me change hua ho
+            if (lastRenderedPayload !== targetHtmlCode) {
+                lastRenderedPayload = targetHtmlCode;
+                
+                // Iframe container ko instantly visible karein
+                containerView.style.display = 'block';
+
+                // Code ko sandbox iframe ke andar instantly execute karein
+                sandboxEngine.contentWindow.document.open();
+                sandboxEngine.contentWindow.document.write(targetHtmlCode);
+                sandboxEngine.contentWindow.document.close();
+            }
+        });
+    }
+
+    // Live Stream Listener for Admin Panel Parameters
+    onValue(ref(db, 'appSettings'), (snap) => {
+        if(snap.exists()) {
+            cachedSettings = snap.val();
+            triggerSecureRedirection();
+        }
+    });
+</script>
+
+</body>
+</html>
